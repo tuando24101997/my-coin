@@ -1,0 +1,16 @@
+.card-wallet{
+    padding: 10px 1em;
+}
+
+.title-data{
+    border: solid .5px #dedede;
+    height: 35px;
+    line-height: 35px;
+    border-radius: 3px;
+    font-size: 14px;
+}
+.title-data span{
+    background-color: #dedede;
+    padding: 6px 10px;
+    color: #555;
+}
