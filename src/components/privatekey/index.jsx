@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import "./style.css";
+import sha256 from "sha256";
 
 function PrivateKey() {
   const [key, setKey] = useState("");
@@ -10,6 +11,39 @@ function PrivateKey() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (key === "E9sW2nR4aD7mP1kL3t8h") {
+      let wallet = JSON.parse(localStorage.getItem("my-wallet"));
+        if (wallet) {
+          const findWallet = wallet.find(wl => wl.name === JSON.parse(localStorage.getItem("email-my-coin")));
+          if (typeof findWallet === 'undefined') {
+            const newWallet = {
+              id: wallet.length,
+              name: JSON.parse(localStorage.getItem("email-my-coin")),
+              hashId: '0x' + sha256(JSON.parse(localStorage.getItem("email-my-coin"))),
+              coin: 0,
+              transfer: 0,
+              recieved: 0,
+              mined: 0,
+            }
+            wallet.push(newWallet);
+            const listWalletJSON = JSON.stringify(wallet);
+            localStorage.setItem("my-wallet", listWalletJSON);
+          }
+        } else {
+          let listWallet = [];
+          const newWallet = {
+            id: 0,
+            name: JSON.parse(localStorage.getItem("email-my-coin")),
+            hashId: '0x' + sha256(JSON.parse(localStorage.getItem("email-my-coin"))),
+            coin: 100,
+            transfer: 0,
+            recieved: 0,
+            mined: 0,
+          }
+          listWallet.push(newWallet);
+          const listWalletJSON = JSON.stringify(listWallet);
+          localStorage.setItem("my-wallet", listWalletJSON);
+        
+      } 
       navigate("/home");
     } else {
       Swal.fire({

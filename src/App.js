@@ -4,6 +4,7 @@ import CreateWallet from "./components/createwallet/createwallet";
 import PrivateKey from "./components/privatekey";
 import CreatePrivateKey from "./components/createkey";
 import HomePage from "./components/homepage";
+import Transaction from "./components/transaction";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/enter-key" element={<PrivateKey />} />
           <Route path="/key" element={<CreatePrivateKey />} />
           <Route path="/home" element={<HomePage />} />
+          <Route path="/transaction" element={<Transaction />} />
         </Routes>
       </Router>
     </div>

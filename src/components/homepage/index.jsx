@@ -1,69 +1,160 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import { Modal } from "react-bootstrap";
-import { Pie } from 'react-chartjs-2';
-import 'chart.js/auto';
-  
+import { Pie } from "react-chartjs-2";
+import sha256 from 'sha256';
+import "chart.js/auto";
+
 import "./style.css";
+import Block from "../block";
 
 function HomePage() {
+  const [modalSend, setModalSend] = useState(false);
+  const [modalView, setModalView] = useState(false);
+  const [transferWallet, setTransferWallet] = useState("");
+  const [valueTransfer, setValueTransfer] = useState(0);
+
   const [block, setBlock] = useState([
     {
       id: 0,
       data: "First block",
       prevHash: "none",
-      hash: "0a57713a039009ebff2dc43afd450706",
+      hash: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
       name: "GENESIS BLOCK",
     },
   ]);
 
-  const [wallet, setWallet] = useState([
-    {
-      id: 0,
-      name: JSON.parse(localStorage.getItem("email")) || "",
-      coin: 100,
-      transfer: 0,
-      recieved: 0,
-    },
-  ]);
-  const [modalSend, setModalSend] = useState(false);
-  const [modalView, setModalView] = useState(false);
+  const [wallet, setWallet] = useState([]);
+  const [myWallet, setMyWallet] = useState({});
+
+  useEffect(() => {
+    // Lấy danh sách ví trong hệ thống
+    const lcwallet = JSON.parse(localStorage.getItem("my-wallet"));
+    setWallet(lcwallet);
+
+    // Lấy thông tin ví người dùng đang sử dụng
+    const user = lcwallet.find(
+      (wl) => wl.name === JSON.parse(localStorage.getItem("email-my-coin"))
+    );
+    
+    setMyWallet(user);
+  }, []);
+
 
   const data = {
-    labels: ['Total Coin', 'Coins Transferred', 'Coins Received', 'Coin Mined'],
+    labels: ["Total Coin", "Coins Transferred", "Coins Received", "Coin Mined"],
     datasets: [
       {
-        label: 'Coin',
-        data: [98, 12, 3, 1],
+        label: "Coin",
+        data: [
+          myWallet.coin,
+          myWallet.transfer,
+          myWallet.recieved,
+          myWallet.mined,
+        ],
         backgroundColor: [
-          'rgba(255, 99, 132, 0.2)',
-          'rgba(54, 162, 235, 0.2)',
-          'rgba(255, 206, 86, 0.2)',
-          'rgba(75, 192, 192, 0.2)',
-          
+          "rgba(255, 99, 132, 0.2)",
+          "rgba(54, 162, 235, 0.2)",
+          "rgba(255, 206, 86, 0.2)",
+          "rgba(75, 192, 192, 0.2)",
         ],
         borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
+          "rgba(255, 99, 132, 1)",
+          "rgba(54, 162, 235, 1)",
+          "rgba(255, 206, 86, 1)",
+          "rgba(75, 192, 192, 1)",
         ],
         borderWidth: 1,
       },
     ],
   };
-  
+
   const options = {
     responsive: true,
     plugins: {
       legend: {
-        position: 'top',
+        position: "top",
       },
       tooltip: {
         enabled: true,
       },
     },
   };
-  
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (valueTransfer > myWallet.coin){
+      Swal.fire({
+        icon: "error",
+        title: "Lỗi",
+        text: "Email không chính xác",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    } else {
+      Swal.fire({
+        title: "Do you want to send coin?",
+        showCancelButton: true,
+        confirmButtonText: "Yes",
+
+      }).then((result) => {
+        /* Read more about isConfirmed, isDenied below */
+        if (result.isConfirmed) {
+          // Edit value list wallet
+          let newWallet = wallet;
+          newWallet[Number(transferWallet)].coin = Number(newWallet[Number(transferWallet)].coin + valueTransfer);
+          newWallet[Number(transferWallet)].recieved = Number(newWallet[Number(transferWallet)].recieved + valueTransfer);
+          newWallet[myWallet.id].coin -= valueTransfer;
+          newWallet[myWallet.id].transfer = Number(newWallet[myWallet.id].transfer + valueTransfer);
+          setWallet(newWallet);
+
+          // Add Transaction in History
+          // id, transaction id, from, to, value
+          const transaction = {
+            id: Math.floor(Date.now() / 1000),
+            transactionId: sha256(block.length),
+            from: myWallet.hashId,
+            to: newWallet[Number(transferWallet)].hashId,
+            block: block.length,
+            value: valueTransfer
+          }
+          let listHistory = JSON.parse(localStorage.getItem("transaction-history"));
+          if(listHistory){
+            listHistory.push(transaction);
+            const listTransactionJSON = JSON.stringify(listHistory);
+            localStorage.setItem("transaction-history", listTransactionJSON);
+          }else{
+            let listTransaction = [];
+            listTransaction.push(transaction);
+            const listTransactionJSON = JSON.stringify(listTransaction);
+            localStorage.setItem("transaction-history", listTransactionJSON);
+          }
+          
+          // Add block in block chain
+          const newBlock = {
+            id : block.length,
+            data: myWallet.name + 'send to ' + newWallet[Number(transferWallet)].name + ' ' + valueTransfer + ' coin',
+            prevHash: block[block.length - 1].hash,
+            hash: sha256('BLOCK #' + block.length),
+            name: 'BLOCK #' + block.length 
+
+          }
+          let currentBlock = block;
+          currentBlock.push(newBlock);
+          setBlock(currentBlock);
+
+          
+          setModalSend(false);
+          Swal.fire({
+            icon: "success",
+            title: "Send coin success",
+            showConfirmButton: false,
+            timer: 1000
+          });
+        } 
+      });
+    }
+  };
 
   return (
     <div>
@@ -116,37 +207,71 @@ function HomePage() {
                     <Modal.Title>Send Coin</Modal.Title>
                   </Modal.Header>
                   <Modal.Body>
-                    <form>
-                        <div>
-                            <label style={{fontSize: '13px', fontWeight: '500'}}>Choose Wallet</label>
-                            <select className="form-control">
-                                <option>1</option>
-                                <option>2</option>
-                                <option>3</option>
-                                <option>4</option>
-                                <option>5</option>
-                            </select>
-                        </div>
-                        <div className="mt-3">
-                            <label style={{fontSize: '13px', fontWeight: '500'}}>Input coin</label>
-                            <input type="number" className="form-control" />
-                        </div>
-                        <div className="mt-4 mb-2" style={{display: 'flex', justifyContent: 'center'}}>
-                            <button className="btn btn-primary" type="submit">Send coin</button>
-                        </div>
+                    <form onSubmit={handleSubmit}>
+                      <div>
+                        <label style={{ fontSize: "13px", fontWeight: "500" }}>
+                          Choose Wallet
+                        </label>
+                        <select
+                          value={transferWallet}
+                          className="form-control"
+                          onChange={(event) => setTransferWallet(event.target.value)}
+                        >
+                          <option value="">Chọn ví...</option>
+                          {wallet.map((wl) => {
+                            if (
+                              wl.name !== JSON.parse(localStorage.getItem("email-my-coin"))
+                            ) {
+                              return (
+                                <option value={wl.id} key={wl.id}>
+                                  {wl.name}
+                                </option>
+                              );
+                            }
+                          })}
+                        </select>
+                      </div>
+                      <div className="mt-3">
+                        <label style={{ fontSize: "13px", fontWeight: "500" }}>
+                          Input coin
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          onChange={(e) => setValueTransfer(e.target.value)}
+                        />
+                      </div>
+                      <div
+                        className="mt-4 mb-2"
+                        style={{ display: "flex", justifyContent: "center" }}
+                      >
+                        <button className="btn btn-primary" type="submit">
+                          Send coin
+                        </button>
+                      </div>
+
                     </form>
                   </Modal.Body>
                 </Modal>
-                <button type="button" onClick={()=>setModalView(true)}>View transaction</button>
+
+                <button type="button" onClick={() => setModalView(true)}>
+                  View transaction
+                </button>
                 <Modal show={modalView} onHide={() => setModalView(false)}>
                   <Modal.Header closeButton>
                     <Modal.Title>View Transaction</Modal.Title>
                   </Modal.Header>
                   <Modal.Body>
-                    <div style={{width: '350px', height: '350px', marginLeft: '55px', marginBottom: '15px'}}>
-                        <Pie data={data} options={options} />
+                    <div
+                      style={{
+                        width: "350px",
+                        height: "350px",
+                        marginLeft: "55px",
+                        marginBottom: "15px",
+                      }}
+                    >
+                      <Pie data={data} options={options} />
                     </div>
-                    
                   </Modal.Body>
                 </Modal>
               </div>
@@ -154,52 +279,15 @@ function HomePage() {
           </div>
 
           <div className="col-8">
-            <div className="card card-wallet shadow-sm">
-              <p className="title-data mb-4">
-                {" "}
-                <span>Data</span> This is first block
-              </p>
-              <div style={{ fontSize: "13px", marginTop: "5px" }}>
-                <p style={{ fontWeight: "500" }}>
-                  {" "}
-                  Previous Hash
-                  <span
-                    style={{
-                      padding: "4px 10px",
-                      border: "solid .5px #0d0db3",
-                      borderRadius: "3px",
-                      marginLeft: "10px",
-                      backgroundColor: "rgb(214 223 250)",
-                      color: "#4e4eff",
-                    }}
-                  >
-                    2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
-                  </span>
-                </p>
-
-                <p style={{ fontWeight: "500" }}>
-                  {" "}
-                  Current Hash
-                  <span
-                    style={{
-                      padding: "4px 10px",
-                      border: "solid .5px #0d0db3",
-                      borderRadius: "3px",
-                      marginLeft: "16px",
-                      backgroundColor: "rgb(214 223 250 / 64%)",
-                      color: "#4e4eff",
-                    }}
-                  >
-                    d7914fe546b684688bb95f4f888a92dfc680603a75f23eb823658031fff766d9
-                  </span>
-                </p>
-              </div>
-              <p className="mt-2" style={{ marginBottom: "5px" }}>
-                <span style={{ fontWeight: "bold", fontSize: "22px" }}>
-                  BLOCK #1
-                </span>
-              </p>
-            </div>
+            {block.map((bl) => (
+              <Block
+                name={bl.name}
+                key={bl.id}
+                prevHash={bl.prevHash}
+                hash={bl.hash}
+                data={bl.data}
+              />
+            ))}
           </div>
         </div>
       </div>
