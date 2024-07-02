@@ -37,6 +37,16 @@ tr{
     text-overflow: ellipsis;
 }
 
+.txtWalletMiner{
+    max-width: 250px;
+    width: 250px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+    display: inline-block;
+}
+
 .header-transaction{
     height: 60px;
     line-height: 60px;
@@ -68,5 +78,7 @@ tr{
     border-radius: 35px;
 }
 
+.txtCenter{
+    text-align: center;
+}
 
- 

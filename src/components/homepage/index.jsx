@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Modal } from "react-bootstrap";
 import { Pie } from "react-chartjs-2";
-import sha256 from 'sha256';
+import sha256 from "sha256";
 import "chart.js/auto";
 
 import "./style.css";
@@ -12,7 +12,7 @@ function HomePage() {
   const [modalSend, setModalSend] = useState(false);
   const [modalView, setModalView] = useState(false);
   const [transferWallet, setTransferWallet] = useState("");
-  const [valueTransfer, setValueTransfer] = useState(0);
+  const [valueTransfer, setValueTransfer] = useState(-1);
 
   const [block, setBlock] = useState([
     {
@@ -27,6 +27,26 @@ function HomePage() {
   const [wallet, setWallet] = useState([]);
   const [myWallet, setMyWallet] = useState({});
 
+  // Thuật toán Proof of Stake
+  const ProofOfStake = () => {
+    let totalStake = 0;
+    for (let i = 0; i < wallet.length; i++) {
+      totalStake += wallet[i].coin;
+    }
+
+    let random = Math.random() * totalStake;
+    let accumulated = 0;
+
+    for (let i = 0; i < wallet.length; i++) {
+      const element = wallet[i];
+      accumulated += element.coin;
+      if (accumulated >= random) {
+        // Validator có nhiều Stake thì tỷ lệ được chọn càng cao
+        return i; // Return vị trí của Validator
+      }
+    }
+  };
+
   useEffect(() => {
     // Lấy danh sách ví trong hệ thống
     const lcwallet = JSON.parse(localStorage.getItem("my-wallet"));
@@ -36,10 +56,19 @@ function HomePage() {
     const user = lcwallet.find(
       (wl) => wl.name === JSON.parse(localStorage.getItem("email-my-coin"))
     );
-    
+
+    // Lấy thông tin block lưu vào hệ thống
+    if (localStorage.getItem("block")) {
+      const lcblock = JSON.parse(localStorage.getItem("block"));
+      setBlock(lcblock);
+    }
+    // const lcblock = JSON.parse(localStorage.getItem("block"));
+    // setBlock(lcblock);
+
+    //console.log(myWallet);
+
     setMyWallet(user);
   }, []);
-
 
   const data = {
     labels: ["Total Coin", "Coins Transferred", "Coins Received", "Coin Mined"],
@@ -83,11 +112,12 @@ function HomePage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (valueTransfer > myWallet.coin){
+
+    if (valueTransfer > myWallet.coin || valueTransfer <= 0 || transferWallet === "" ) {
       Swal.fire({
         icon: "error",
         title: "Lỗi",
-        text: "Email không chính xác",
+        text: "Dữ liệu đầu vào không phù hợp",
         showConfirmButton: false,
         timer: 1500,
       });
@@ -96,17 +126,28 @@ function HomePage() {
         title: "Do you want to send coin?",
         showCancelButton: true,
         confirmButtonText: "Yes",
-
       }).then((result) => {
         /* Read more about isConfirmed, isDenied below */
         if (result.isConfirmed) {
           // Edit value list wallet
+          const miner = ProofOfStake();
           let newWallet = wallet;
-          newWallet[Number(transferWallet)].coin = Number(newWallet[Number(transferWallet)].coin + valueTransfer);
-          newWallet[Number(transferWallet)].recieved = Number(newWallet[Number(transferWallet)].recieved + valueTransfer);
-          newWallet[myWallet.id].coin -= valueTransfer;
-          newWallet[myWallet.id].transfer = Number(newWallet[myWallet.id].transfer + valueTransfer);
+          newWallet[Number(transferWallet)].coin =
+            Number(newWallet[Number(transferWallet)].coin) +
+            Number(valueTransfer);
+          newWallet[Number(transferWallet)].recieved =
+            Number(newWallet[Number(transferWallet)].recieved) +
+            Number(valueTransfer);
+          newWallet[myWallet.id].coin =
+            Number(newWallet[myWallet.id].coin) - Number(valueTransfer);
+          newWallet[myWallet.id].transfer =
+            Number(newWallet[myWallet.id].transfer) + Number(valueTransfer);
+          newWallet[miner].mined = Number(newWallet[miner].mined) + 1;
+          newWallet[miner].coin = Number(newWallet[miner].coin) + 1;
+
           setWallet(newWallet);
+          const listWalletJSON = JSON.stringify(newWallet);
+          localStorage.setItem("my-wallet", listWalletJSON);
 
           // Add Transaction in History
           // id, transaction id, from, to, value
@@ -116,42 +157,54 @@ function HomePage() {
             from: myWallet.hashId,
             to: newWallet[Number(transferWallet)].hashId,
             block: block.length,
-            value: valueTransfer
-          }
-          let listHistory = JSON.parse(localStorage.getItem("transaction-history"));
-          if(listHistory){
+            value: valueTransfer,
+            idMiner: wallet[miner].hashId,
+            nameMiner: wallet[miner].name,
+          };
+
+          let listHistory = JSON.parse(
+            localStorage.getItem("transaction-history")
+          );
+          if (listHistory) {
             listHistory.push(transaction);
             const listTransactionJSON = JSON.stringify(listHistory);
             localStorage.setItem("transaction-history", listTransactionJSON);
-          }else{
+          } else {
             let listTransaction = [];
             listTransaction.push(transaction);
             const listTransactionJSON = JSON.stringify(listTransaction);
             localStorage.setItem("transaction-history", listTransactionJSON);
           }
-          
+
           // Add block in block chain
           const newBlock = {
-            id : block.length,
-            data: myWallet.name + 'send to ' + newWallet[Number(transferWallet)].name + ' ' + valueTransfer + ' coin',
+            id: block.length,
+            data:
+              myWallet.name +
+              " send to " +
+              newWallet[Number(transferWallet)].name +
+              " " +
+              valueTransfer +
+              " coin",
             prevHash: block[block.length - 1].hash,
-            hash: sha256('BLOCK #' + block.length),
-            name: 'BLOCK #' + block.length 
-
-          }
+            hash: sha256("BLOCK #" + block.length),
+            name: "BLOCK #" + block.length,
+          };
           let currentBlock = block;
           currentBlock.push(newBlock);
           setBlock(currentBlock);
 
-          
+          const listBlockJSON = JSON.stringify(currentBlock);
+          localStorage.setItem("block", listBlockJSON);
+
           setModalSend(false);
           Swal.fire({
             icon: "success",
             title: "Send coin success",
             showConfirmButton: false,
-            timer: 1000
+            timer: 1000,
           });
-        } 
+        }
       });
     }
   };
@@ -161,12 +214,12 @@ function HomePage() {
       <div className="header shadow-sm mb-4">
         <p style={{ fontWeight: "bold", fontSize: "20px" }}>HOMEPAGE</p>
         <div>
-          <a href="/home">Chuyển ví</a>
-          <a href="/">Tạo ví mới</a>
+          <a href="/transaction">View Transaction</a>
+          <a href="/login">Swap Wallet</a>
         </div>
       </div>
 
-      <div className="container">
+      <div className="container cont">
         <div className="row">
           <div className="col-4">
             <div className="card">
@@ -189,15 +242,45 @@ function HomePage() {
                 My Wallet
               </p>
               <div style={{ padding: "0 1.8em" }}>
-                <p>
-                  Name <span></span>
-                </p>
-                <p>
-                  Coin <span></span>
-                </p>
+                <div className="row mb-2">
+                  <div className="col-5 txt-infor-wallet">Name</div>
+                  <div className="col-7 txt-infor-wallet-2">
+                    {myWallet.name}
+                  </div>
+                </div>
+                <div className="row mb-2">
+                  <div className="col-5 txt-infor-wallet">Id</div>
+                  <div className="col-7 long-text txt-infor-wallet-2 hash-id">
+                    {myWallet.hashId}
+                  </div>
+                </div>
+                <div className="row mb-2 ">
+                  <div className="col-5 txt-infor-wallet">Total Coin</div>
+                  <div className="col-7 txt-infor-wallet-2">
+                    <span className="coin-1">{myWallet.coin}</span>
+                  </div>
+                </div>
+                <div className="row mb-2">
+                  <div className="col-5 txt-infor-wallet">Coin Transferred</div>
+                  <div className="col-7 txt-infor-wallet-2">
+                    <span className="coin-2">{myWallet.transfer}</span>
+                  </div>
+                </div>
+                <div className="row mb-2">
+                  <div className="col-5 txt-infor-wallet">Coin Reciedved</div>
+                  <div className="col-7 txt-infor-wallet-2">
+                    <span className="coin-3">{myWallet.recieved}</span>
+                  </div>
+                </div>
+                <div className="row mb-2">
+                  <div className="col-5 txt-infor-wallet">Coin Mined</div>
+                  <div className="col-7 txt-infor-wallet-2">
+                    <span className="coin-4">{myWallet.mined}</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="group-button mb-3">
+              <div className="group-button mb-3 mt-3">
                 <button type="button" onClick={() => setModalSend(true)}>
                   Send coin
                 </button>
@@ -215,12 +298,15 @@ function HomePage() {
                         <select
                           value={transferWallet}
                           className="form-control"
-                          onChange={(event) => setTransferWallet(event.target.value)}
+                          onChange={(event) =>
+                            setTransferWallet(event.target.value)
+                          }
                         >
                           <option value="">Chọn ví...</option>
                           {wallet.map((wl) => {
                             if (
-                              wl.name !== JSON.parse(localStorage.getItem("email-my-coin"))
+                              wl.name !==
+                              JSON.parse(localStorage.getItem("email-my-coin"))
                             ) {
                               return (
                                 <option value={wl.id} key={wl.id}>
@@ -249,7 +335,6 @@ function HomePage() {
                           Send coin
                         </button>
                       </div>
-
                     </form>
                   </Modal.Body>
                 </Modal>
@@ -279,15 +364,18 @@ function HomePage() {
           </div>
 
           <div className="col-8">
-            {block.map((bl) => (
-              <Block
-                name={bl.name}
-                key={bl.id}
-                prevHash={bl.prevHash}
-                hash={bl.hash}
-                data={bl.data}
-              />
-            ))}
+            <p style={{fontWeight: 'bold', fontSize: '20px'}}>BLOCKCHAIN</p>
+            <div className="list-blockchain">
+              {block.map((bl) => (
+                <Block
+                  name={bl.name}
+                  key={bl.id}
+                  prevHash={bl.prevHash}
+                  hash={bl.hash}
+                  data={bl.data}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>

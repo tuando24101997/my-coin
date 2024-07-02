@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./style.css";
@@ -15,7 +16,7 @@ const validatePassword = (input) => {
   return lengthValid;
 };
 
-function CreateWallet() {
+function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -28,58 +29,22 @@ function CreateWallet() {
 
     if (check && checkPassword) {
       let wallet = JSON.parse(localStorage.getItem("my-wallet"));
-      console.log(wallet);
-      if (wallet) {
-        const findWallet = wallet.find((wl) => wl.name === email);
-        console.log(findWallet);
-        if (findWallet === undefined) {
-          navigate("/key");
-          const nameJSON = JSON.stringify(email);
-          localStorage.setItem("email-my-coin", nameJSON);
-          const passwordJSON = JSON.stringify(password);
-          localStorage.setItem("password-my-coin", passwordJSON);
-        } else {
-          Swal.fire({
-            icon: "error",
-            title: "Lỗi",
-            text: "Username đã tồn tại",
-            showConfirmButton: false,
-            timer: 1500,
-          });
-        }
-      }else {
-        navigate("/key");
+      const user = wallet.find(
+        (wl) => wl.name === email && wl.password === password
+      );
+      if(user){
+        navigate("/home");
         const nameJSON = JSON.stringify(email);
         localStorage.setItem("email-my-coin", nameJSON);
-        const passwordJSON = JSON.stringify(email);
-        localStorage.setItem("password-my-coin", passwordJSON);
+      }else{
+        Swal.fire({
+          icon: "error",
+          title: "Lỗi",
+          text: "Tài khoản của bạn không đúng",
+          showConfirmButton: false,
+          timer: 1500,
+        });
       }
-
-      // let wallet = JSON.parse(localStorage.getItem("my-wallet"));
-      // if (wallet) {
-      //   const findWallet = wallet.find(wl => wl.name === email);
-      //   if(findWallet === 'undefined'){
-      //     navigate("/key");
-      //     const nameJSON = JSON.stringify(email);
-      //     localStorage.setItem("email-my-coin", nameJSON);
-      //     const passwordJSON = JSON.stringify(email);
-      //     localStorage.setItem("password-my-coin", passwordJSON);
-      //   } else {
-      //     Swal.fire({
-      //       icon: "error",
-      //       title: "Lỗi",
-      //       text: "Username đã tồn tại",
-      //       showConfirmButton: false,
-      //       timer: 2500,
-      //     });
-      //   }
-      // } else {
-      //   navigate("/key");
-      //   const nameJSON = JSON.stringify(email);
-      //   localStorage.setItem("email-my-coin", nameJSON);
-      //   const passwordJSON = JSON.stringify(email);
-      //   localStorage.setItem("password-my-coin", passwordJSON);
-      // }
     } else {
       Swal.fire({
         icon: "error",
@@ -97,7 +62,7 @@ function CreateWallet() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        height: "100vh",
+        height: '100vh'
       }}
     >
       <div className="card-content">
@@ -106,7 +71,7 @@ function CreateWallet() {
           My Coin
         </div>
         <div>
-          <h3>Tạo ví mới</h3>
+          <h3>Đăng nhập</h3>
         </div>
         <form onSubmit={handleSubmit}>
           <input
@@ -125,12 +90,11 @@ function CreateWallet() {
             Create wallet
           </button>
         </form>
-        <p style={{ marginTop: "1.2em", fontSize: "12px" }}>
-          Bạn đã có ví? <a href="/login">Đăng nhập</a>
-        </p>
+        <p style={{marginTop: '1.2em', fontSize: '12px'}}>Bạn chưa có ví? <a href="/">Đăng kí</a></p>
       </div>
     </div>
   );
 }
 
-export default CreateWallet;
+export default Login;
+

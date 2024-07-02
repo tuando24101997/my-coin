@@ -12,38 +12,43 @@ function PrivateKey() {
     e.preventDefault();
     if (key === "E9sW2nR4aD7mP1kL3t8h") {
       let wallet = JSON.parse(localStorage.getItem("my-wallet"));
-        if (wallet) {
-          const findWallet = wallet.find(wl => wl.name === JSON.parse(localStorage.getItem("email-my-coin")));
-          if (typeof findWallet === 'undefined') {
-            const newWallet = {
-              id: wallet.length,
-              name: JSON.parse(localStorage.getItem("email-my-coin")),
-              hashId: '0x' + sha256(JSON.parse(localStorage.getItem("email-my-coin"))),
-              coin: 0,
-              transfer: 0,
-              recieved: 0,
-              mined: 0,
-            }
-            wallet.push(newWallet);
-            const listWalletJSON = JSON.stringify(wallet);
-            localStorage.setItem("my-wallet", listWalletJSON);
-          }
-        } else {
-          let listWallet = [];
+      if (wallet) {
+        const findWallet = wallet.find(
+          (wl) => wl.name === JSON.parse(localStorage.getItem("email-my-coin"))
+        );
+        if (typeof findWallet === "undefined") {
           const newWallet = {
-            id: 0,
+            id: wallet.length,
             name: JSON.parse(localStorage.getItem("email-my-coin")),
-            hashId: '0x' + sha256(JSON.parse(localStorage.getItem("email-my-coin"))),
-            coin: 100,
+            password: JSON.parse(localStorage.getItem("password-my-coin")),
+            hashId:
+              "0x" + sha256(JSON.parse(localStorage.getItem("email-my-coin"))),
+            coin: 0,
             transfer: 0,
             recieved: 0,
             mined: 0,
-          }
-          listWallet.push(newWallet);
-          const listWalletJSON = JSON.stringify(listWallet);
+          };
+          wallet.push(newWallet);
+          const listWalletJSON = JSON.stringify(wallet);
           localStorage.setItem("my-wallet", listWalletJSON);
-        
-      } 
+        }
+      } else {
+        let listWallet = [];
+        const newWallet = {
+          id: 0,
+          name: JSON.parse(localStorage.getItem("email-my-coin")),
+          password: JSON.parse(localStorage.getItem("password-my-coin")),
+          hashId:
+            "0x" + sha256(JSON.parse(localStorage.getItem("email-my-coin"))),
+          coin: 100,
+          transfer: 0,
+          recieved: 0,
+          mined: 0,
+        };
+        listWallet.push(newWallet);
+        const listWalletJSON = JSON.stringify(listWallet);
+        localStorage.setItem("my-wallet", listWalletJSON);
+      }
       navigate("/home");
     } else {
       Swal.fire({
@@ -61,7 +66,7 @@ function PrivateKey() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        height: '100vh'
+        height: "100vh",
       }}
     >
       <div className="card-content">
